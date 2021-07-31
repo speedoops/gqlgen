@@ -24,7 +24,7 @@ By [@ddouglas](https://github.com/ddouglas) in [#1436](https://github.com/99desi
 ### Fixed
 
 * Removed a data race by copying when input fields have default values.
-Bu [@skaji](https://github.com/skaji) in [#1456](https://github.com/99designs/gqlgen/pull/1456)
+By [@skaji](https://github.com/skaji) in [#1456](https://github.com/99designs/gqlgen/pull/1456)
 * v0.12.2 broke the handling of pointers to slices by calling the custom Marshal and Unmarshal functions on the entire slice.  It now correctly calls the custom Marshal and Unmarshal methods for each element in the slice. <br />
 By [@ananyasaxena](https://github.com/ananyasaxena) in [#1363](https://github.com/99designs/gqlgen/pull/1363)
 * Changes in go1.16 that mean go.mod and go.sum aren't always up to date.  Now `go mod tidy` is run after code generation. <br />
