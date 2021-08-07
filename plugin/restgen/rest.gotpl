@@ -1,18 +1,29 @@
-{{ reserveImport "context" }}
-{{ reserveImport "log" }}
-{{ reserveImport "net/http" }}
-{{ reserveImport "os" }}
-{{ reserveImport "github.com/99designs/gqlgen/graphql/playground" }}
-{{ reserveImport "github.com/99designs/gqlgen/graphql/handler" }}
+{{ reserveImport "context"  }}
+{{ reserveImport "fmt"  }}
+{{ reserveImport "io"  }}
+{{ reserveImport "strconv"  }}
+{{ reserveImport "time"  }}
+{{ reserveImport "sync"  }}
+{{ reserveImport "errors"  }}
+{{ reserveImport "bytes"  }}
 
-func RESTmain() {
-	port := "8080"
+{{ reserveImport "github.com/vektah/gqlparser/v2" }}
+{{ reserveImport "github.com/vektah/gqlparser/v2/ast" }}
+{{ reserveImport "github.com/99designs/gqlgen/graphql" }}
+{{ reserveImport "github.com/99designs/gqlgen/graphql/introspection" }}
 
-	srv := handler.NewDefaultServer({{ lookupImport .ExecPackageName }}.NewExecutableSchema({{ lookupImport .ExecPackageName}}.Config{Resolvers: &{{ lookupImport .ResolverPackageName}}.Resolver{}}))
+{{ $root := . }}
 
-	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
-	http.Handle("/query", srv)
-
-	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
-	log.Fatal(http.ListenAndServe(":" + port, nil))
-}
+{{ $object := .QueryRoot }}
+	{{- range $field := $object.Fields }} //Field
+		// {{- $field.FieldDefinition.Name -}}
+		//{{- $field.Name -}}(
+		{{- range $arg := $field.TypeReference.Definition.Fields }}
+			//{{- $arg.Name -}},
+		{{- end }}
+		//),
+		{{- if $field.IsResolver }}
+			{{- $field.GoFieldName}} func{{ $field.ShortResolverDeclaration }} //SRD
+		{{ end }}
+	{{- end }}
+{{- end }}

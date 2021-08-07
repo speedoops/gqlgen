@@ -1,50 +1,84 @@
 package restgen
 
 import (
-	"log"
-	"os"
+	"fmt"
+	"path/filepath"
+	"syscall"
+
+	"github.com/99designs/gqlgen/internal/code"
 
 	"github.com/99designs/gqlgen/codegen"
+	"github.com/99designs/gqlgen/codegen/config"
 	"github.com/99designs/gqlgen/codegen/templates"
 	"github.com/99designs/gqlgen/plugin"
-	"github.com/pkg/errors"
 )
 
-func New(filename string) plugin.Plugin {
-	return &Plugin{filename}
+func New(filename string, typename string) plugin.Plugin {
+	return &Plugin{filename: filename, typeName: typename}
 }
 
 type Plugin struct {
 	filename string
+	typeName string
 }
 
 var _ plugin.CodeGenerator = &Plugin{}
+var _ plugin.ConfigMutator = &Plugin{}
 
 func (m *Plugin) Name() string {
-	return "servergen"
+	return "restgen"
 }
-func (m *Plugin) GenerateCode(data *codegen.Data) error {
-	serverBuild := &ServerBuild{
-		ExecPackageName:     data.Config.Exec.ImportPath(),
-		ResolverPackageName: data.Config.Resolver.ImportPath(),
-	}
 
-	if _, err := os.Stat(m.filename); os.IsNotExist(errors.Cause(err)) {
-		return templates.Render(templates.Options{
-			PackageName: "main",
-			Filename:    m.filename,
-			Data:        serverBuild,
-			Packages:    data.Config.Packages,
-		})
-	}
-
-	log.Printf("Skipped server: %s already exists\n", m.filename)
+func (m *Plugin) MutateConfig(cfg *config.Config) error {
+	_ = syscall.Unlink(m.filename)
 	return nil
 }
 
-type ServerBuild struct {
-	codegen.Data
+// ADE:
+func DbgPrint(data *codegen.Data) {
+	// data.Objects
+	// data.QueryRoot.Fields
+	// _ = data.Objects[0].Fields[0].ShortResolverDeclaration()
+	// _ = data.Objects[0].Fields[0].Arguments[0].Name
+	object := data.Objects.ByName("query")
+	_ = data.QueryRoot
+	fmt.Printf("objects: %#v\n", object)
+	if object == nil {
+		return
+	}
 
-	ExecPackageName     string
-	ResolverPackageName string
+	field := object.Fields[0]
+	fmt.Printf("fields: %#v, %s\n", field, field.Name)
+	if field == nil {
+		return
+	}
+
+	fmt.Println(field.Name, field.FieldDefinition.Name, field.TypeReference.Definition.Fields[0].Name)
+}
+
+func (m *Plugin) GenerateCode(data *codegen.Data) error {
+	DbgPrint(data)
+
+	abs, err := filepath.Abs(m.filename)
+	if err != nil {
+		return err
+	}
+	pkgName := code.NameForDir(filepath.Dir(abs))
+
+	return templates.Render(templates.Options{
+		PackageName: pkgName,
+		Filename:    m.filename,
+		Data: &ResolverBuild{
+			Data:     data,
+			TypeName: m.typeName,
+		},
+		GeneratedHeader: true,
+		Packages:        data.Config.Packages,
+	})
+}
+
+type ResolverBuild struct {
+	*codegen.Data
+
+	TypeName string
 }
