@@ -35,29 +35,36 @@ func (m *Plugin) MutateConfig(cfg *config.Config) error {
 }
 
 // ADE:
-func DbgPrint(data *codegen.Data) {
+func DbgPrint(data *codegen.Data, object *codegen.Object) {
 	// data.Objects
 	// data.QueryRoot.Fields
 	// _ = data.Objects[0].Fields[0].ShortResolverDeclaration()
 	// _ = data.Objects[0].Fields[0].Arguments[0].Name
-	object := data.Objects.ByName("query")
-	_ = data.QueryRoot
-	fmt.Printf("objects: %#v\n", object)
+	fmt.Printf("\n=> objects: %#v\n", object.Type)
 	if object == nil {
 		return
 	}
 
-	field := object.Fields[0]
-	fmt.Printf("fields: %#v, %s\n", field, field.Name)
-	if field == nil {
-		return
-	}
+	for _, field := range object.Fields {
+		fmt.Printf("=> fields: %#v, %s\n", field, field.Name)
+		if field == nil {
+			return
+		}
 
-	fmt.Println(field.Name, field.FieldDefinition.Name, field.TypeReference.Definition.Fields[0].Name)
+		fmt.Println("=> field: ", field.Name, field.FieldDefinition.Name)
+
+		for _, innerField := range field.TypeReference.Definition.Fields {
+			fmt.Println(innerField.Name, innerField.Type)
+			innerObject := data.Objects.ByName(innerField.Name)
+			if innerObject != nil {
+				DbgPrint(data, innerObject)
+			}
+		}
+	}
 }
 
 func (m *Plugin) GenerateCode(data *codegen.Data) error {
-	DbgPrint(data)
+	DbgPrint(data, data.Objects.ByName("query"))
 
 	abs, err := filepath.Abs(m.filename)
 	if err != nil {

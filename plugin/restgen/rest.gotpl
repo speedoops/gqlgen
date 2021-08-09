@@ -14,16 +14,40 @@
 
 {{ $root := . }}
 
-{{ $object := .QueryRoot }}
-	{{- range $field := $object.Fields }} //Field
-		// {{- $field.FieldDefinition.Name -}}
-		//{{- $field.Name -}}(
-		{{- range $arg := $field.TypeReference.Definition.Fields }}
-			//{{- $arg.Name -}},
-		{{- end }}
-		//),
-		{{- if $field.IsResolver }}
-			{{- $field.GoFieldName}} func{{ $field.ShortResolverDeclaration }} //SRD
-		{{ end }}
-	{{- end }}
-{{- end }}
+// Query
+{{ $object := .QueryRoot -}}
+{{ range $field := $object.Fields -}}
+	type query_{{ $field.Name }} struct {
+	{{ range $innerField := $field.TypeReference.Definition.Fields -}}	
+		{{- $innerObject := ($root.Objects.ByName $innerField.Name) -}}
+		{{- if $innerObject -}}
+			{{- $innerField.Name }} struct {
+				{{ range $field := $innerObject.Fields -}}
+					{{- $field.Name }} int
+				{{ end -}}
+			}
+		{{- else -}}
+			{{- $innerField.Name }} interface{}
+		{{ end -}}
+	{{ end -}}
+	}
+{{ end }}
+
+// Mutation
+{{ $object := .QueryRoot -}}
+{{ range $field := $object.Fields -}}
+	// mutation_{{ $field.Name }} := "{
+	{{- range $innerField := $field.TypeReference.Definition.Fields -}}	
+		{{- $innerObject := ($root.Objects.ByName $innerField.Name) -}}
+		{{- if $innerObject -}}
+			{{- $innerField.Name }}{
+				{{- range $field := $innerObject.Fields -}}
+					{{- $field.Name }},
+				{{- end -}}
+			}
+		{{- else -}}
+			{{- $innerField.Name }},
+		{{- end -}}
+	{{- end -}}
+	}"
+{{ end }}
